@@ -18,15 +18,30 @@ except ImportError:
 # ============================================================
 #  CONFIGURATION
 # ============================================================
-SP_SITE        = "roseblanchetn.sharepoint.com"
-SP_SITE_PATH   = "/sites/SDAHSESTPA"
-SP_BASE_URL    = "https://roseblanchetn.sharepoint.com"
-FILE_UNIQUE_ID = "0761FA65-3D84-4B10-B009-8CA5BF050C98"
-CLIENT_ID      = "14d82eec-204b-4c2f-b7e8-296a70dab67e"
-AUTHORITY      = "https://login.microsoftonline.com/organizations"
-SCOPES         = [
+
+# --- Fichier SOURCE (site entreprise — lecture seule) ---
+SP_SOURCE_SITE     = "roseblanchetn.sharepoint.com"
+SP_SOURCE_PATH     = "/sites/SDAHSESTPA"
+SP_SOURCE_BASE_URL = "https://roseblanchetn.sharepoint.com"
+FILE_UNIQUE_ID     = "0761FA65-3D84-4B10-B009-8CA5BF050C98"
+
+# --- Destination : ton OneDrive personnel ---
+# ID du document cible extrait de l'URL fournie
+# sourcedoc={e7159317-9794-43f3-81fd-6e5ad8b6baca}
+ONEDRIVE_HOST      = "roseblanchetn-my.sharepoint.com"
+ONEDRIVE_USER      = "siwar_chaari_rose-blanche_com"   # remplace _ par . si besoin
+# Dossier de destination dans ton OneDrive (sera créé automatiquement s'il n'existe pas)
+ONEDRIVE_FOLDER    = "Anomalies_Export"
+
+# --- Auth ---
+CLIENT_ID  = "14d82eec-204b-4c2f-b7e8-296a70dab67e"
+AUTHORITY  = "https://login.microsoftonline.com/organizations"
+SCOPES     = [
+    # Lecture du site source
     "https://roseblanchetn.sharepoint.com/AllSites.Read",
-    "https://roseblanchetn.sharepoint.com/AllSites.Write"
+    # Écriture sur OneDrive personnel
+    "https://graph.microsoft.com/Files.ReadWrite",
+    "https://graph.microsoft.com/User.Read",
 ]
 
 MOIS_FR = {1:"Janvier",2:"Février",3:"Mars",4:"Avril",5:"Mai",6:"Juin",
@@ -34,38 +49,25 @@ MOIS_FR = {1:"Janvier",2:"Février",3:"Mars",4:"Avril",5:"Mai",6:"Juin",
 
 # ============================================================
 #  CONFIGURATION DES TABLES
-#
-#  Chaque table est décrite par un dict contenant :
-#  - sheet       : nom de la feuille Excel source
-#  - output      : nom du fichier Excel de sortie
-#  - col_date    : colonne Date
-#  - col_lot     : colonne N° Lot
-#  - col_etape   : colonne Étape
-#  - col_echant  : colonne N° Échantillon
-#  - col_notif   : colonne Résultat (Libération / Blocage)
-#  - col_prob    : colonne Problème
-#  - numeric     : liste de (col_excel, label, condition_lambda, cible_texte)
-#  - string      : liste de (col_excel, label, valeur_cible_conforme)
 # ============================================================
 
-# ---------- Règles communes SSSE ----------
 SSSE_NUMERIC = [
-    ("Humidité (%)",               "Teneur en Eau",   lambda v: v <= 13 or v >= 14.5, "13 < x < 14.5"),
-    ("AW",                         "AW",              lambda v: v >= 0.7,              "< 0.7"),
-    ("Protéine Brut (%) (+/-0,7)", "Protéine Brute",  lambda v: v <= 10,               "> 10 %"),
-    ("Protéine (%)/MS",            "Protéine/MS",     lambda v: v <= 12,               "> 12 %"),
-    ("∑ >400µ",                    "G>400µ",          lambda v: v >= 10,               "< 10 %"),
-    ("∑ 355;250",                  "G 355-250µ",      lambda v: v <= 40,               "> 40 %"),
-    ("∑ < 200µ",                   "G<200µ",          lambda v: v >= 50,               "< 50 %"),
-    ("G < 125µ",                   "G<125µ",          lambda v: v >= 10,               "< 10 %"),
-    ("Gluten Humide",              "Gluten Humide",   lambda v: v <= 28,               "> 28 %"),
-    ("Gluten Index",               "Gluten Index",    lambda v: v <= 65 or v >= 90,    "65 < x < 90"),
-    ("Gluten Sec",                 "Gluten Sec",      lambda v: v <= 10,               "> 10 %"),
-    ("Col. b",                     "Couleur b",       lambda v: v <= 18,               "> 18"),
-    ("Piqûre Noir",                "Piqûre Noir",     lambda v: v >= 10,               "< 10"),
-    ("Piqûre Brun",                "Piqûre Brun",     lambda v: v >= 100,              "< 100"),
-    ("Cendres (%) (+/- 0,02)",     "Cendres",         lambda v: v >= 1,                "< 1 %"),
-    ("T Chute",                    "Temps de Chute",  lambda v: v <= 250,              "> 250"),
+    ("Humidité (%)",               "Teneur en Eau",   lambda v: v < 13 or v > 14.5, "13 < x < 14.5"),
+    ("AW",                         "AW",              lambda v: v > 0.7,              "< 0.7"),
+    ("Protéine Brut (%) (+/-0,7)", "Protéine Brute",  lambda v: v < 10,               "> 10 %"),
+    ("Protéine (%)/MS",            "Protéine/MS",     lambda v: v < 12,               "> 12 %"),
+    ("∑ >400µ",                    "G>400µ",          lambda v: v > 10,               "< 10 %"),
+    ("∑ 355;250",                  "G 355-250µ",      lambda v: v < 40,               "> 40 %"),
+    ("∑ < 200µ",                   "G<200µ",          lambda v: v > 50,               "< 50 %"),
+    ("G < 125µ",                   "G<125µ",          lambda v: v > 10,               "< 10 %"),
+    ("Gluten Humide",              "Gluten Humide",   lambda v: v < 28,               "> 28 %"),
+    ("Gluten Index",               "Gluten Index",    lambda v: v < 65 or v > 90,    "65 < x < 90"),
+    ("Gluten Sec",                 "Gluten Sec",      lambda v: v < 10,               "> 10 %"),
+    ("Col. b",                     "Couleur b",       lambda v: v < 18,               "> 18"),
+    ("Piqûre Noir",                "Piqûre Noir",     lambda v: v > 10,               "< 10"),
+    ("Piqûre Brun",                "Piqûre Brun",     lambda v: v > 100,              "< 100"),
+    ("Cendres (%) (+/- 0,02)",     "Cendres",         lambda v: v > 1,                "< 1 %"),
+    ("T Chute",                    "Temps de Chute",  lambda v: v < 250,              "> 250"),
 ]
 SSSE_STRING = [
     ("Embalage (Etanchité,visuel...)", "Emballage",  "C"),
@@ -73,23 +75,21 @@ SSSE_STRING = [
     ("C .Date",                        "Etiquetage", "C"),
 ]
 
-# ---------- Règles PS-7 (T55) ----------
-# Seuils issus du tableau de référence image
 PS7_NUMERIC = [
-    ("Humidité (%)",               "Teneur en Eau",   lambda v: v <= 13 or v >= 14.5, "13 < x < 14.5"),
-    ("AW",                         "AW",              lambda v: v >= 0.7,              "< 0.7"),
-    ("Protéine Brut (%) (+/-0,6)", "Protéine Brute",  lambda v: v <= 9.6,              "> 9.6 %"),
-    ("Prot (%)/MS",                "Protéine/MS",     lambda v: v <= 11,               "> 11 %"),
-    ("Tps de Chute",               "Temps de Chute",  lambda v: v <= 250,              "> 250"),
-    ("Amidon End",                 "Amidon End (UCD)", lambda v: v <= 18 or v >= 25,   "18-25"),
-    ("G 200µ",                     "G 200µ",          lambda v: v >= 2,                "< 2 %"),
-    ("∑ 180;63",                   "∑ 180-63µ",       lambda v: v <= 63,               "> 63 %"),  # max2% for G200, sum target
-    ("Gluten Humide",              "Gluten Humide",   lambda v: v <= 22,               "> 22 %"),
-    ("Col. L",                     "Couleur L",       lambda v: v <= 90,               "> 90"),
-    ("Cendres (%) (+/- 0,02)",     "Cendres",         lambda v: v >= 0.6,              "< 0.6 %"),
-    ("Alvéo W",                    "Alvéo W",         lambda v: v <= 150,              ">= 150"),
-    ("Alvéo P/L",                  "Alvéo P/L",       lambda v: v < 1 or v > 1.8,     "1 <= x <= 1.8"),
-    ("Alvéo Ie",                   "Alvéo Ie",        lambda v: v <= 45,               "> 45"),
+    ("Humidité (%)",               "Teneur en Eau",    lambda v: v < 13 or v > 14.5, "13 < x < 14.5"),
+    ("AW",                         "AW",               lambda v: v > 0.7,              "< 0.7"),
+    ("Protéine Brut (%) (+/-0,6)", "Protéine Brute",   lambda v: v < 9.6,              "> 9.6 %"),
+    ("Prot (%)/MS",                "Protéine/MS",      lambda v: v < 11,               "> 11 %"),
+    ("Tps de Chute",               "Temps de Chute",   lambda v: v < 250,              "> 250"),
+    ("Amidon End",                 "Amidon End (UCD)", lambda v: v < 18 or v > 25,    "18-25"),
+    ("G 200µ",                     "G 200µ",           lambda v: v > 2,                "< 2 %"),
+    ("∑ 180;63",                   "∑ 180-63µ",        lambda v: v <= 63,              "> 63 %"),
+    ("Gluten Humide",              "Gluten Humide",    lambda v: v < 22,               "> 22 %"),
+    ("Col. L",                     "Couleur L",        lambda v: v < 90,               "> 90"),
+    ("Cendres (%) (+/- 0,02)",     "Cendres",          lambda v: v > 0.6,              "< 0.6 %"),
+    ("Alvéo W",                    "Alvéo W",          lambda v: v < 150,              ">= 150"),
+    ("Alvéo P/L",                  "Alvéo P/L",        lambda v: v < 1 or v > 1.8,    "1 <= x <= 1.8"),
+    ("Alvéo Ie",                   "Alvéo Ie",         lambda v: v < 45,               "> 45"),
 ]
 PS7_STRING = [
     ("Embalage (Etanchité,visuel...)", "Emballage",  "C"),
@@ -97,22 +97,21 @@ PS7_STRING = [
     ("C.Date",                         "Etiquetage", "C"),
 ]
 
-# ---------- Règles PS (T65) ----------
 PS_NUMERIC = [
-    ("Humidité (%)",               "Teneur en Eau",   lambda v: v <= 13 or v >= 14.5, "13 < x < 14.5"),
-    ("AW",                         "AW",              lambda v: v >= 0.7,              "< 0.7"),
-    ("Protéine Brut (%) (+/-0,6)", "Protéine Brute",  lambda v: v <= 9.6,              "> 9.6 %"),
-    ("Prot (%)/MS",                "Protéine/MS",     lambda v: v <= 11,               "> 11 %"),
-    ("Tps de Chute",               "Temps de Chute",  lambda v: v <= 250,              "> 250"),
-    ("Amidon End",                 "Amidon End (UCD)", lambda v: v <= 18 or v >= 25,   "18-25"),
-    ("G 200µ",                     "G 200µ",          lambda v: v >= 2,                "< 2 %"),
-    ("∑ 180;63",                   "∑ 180-63µ",       lambda v: v <= 63,               "> 63 %"),
-    ("Gluten Humide",              "Gluten Humide",   lambda v: v <= 22,               "> 22 %"),
-    ("Col. L",                     "Couleur L",       lambda v: v <= 89,               "> 89"),
-    ("Cendres (%) (+/- 0,02)",     "Cendres",         lambda v: v >= 0.7,              "< 0.7 %"),
-    ("Alvéo W",                    "Alvéo W",         lambda v: v <= 150,              ">= 150"),
-    ("Alvéo P/L",                  "Alvéo P/L",       lambda v: v < 1 or v > 1.5,     "1 <= x <= 1.5"),
-    ("Alvéo Ie",                   "Alvéo Ie",        lambda v: v <= 45,               "> 45"),
+    ("Humidité (%)",               "Teneur en Eau",    lambda v: v < 13 or v > 14.5, "13 < x < 14.5"),
+    ("AW",                         "AW",               lambda v: v > 0.7,              "< 0.7"),
+    ("Protéine Brut (%) (+/-0,6)", "Protéine Brute",   lambda v: v < 9.6,              "> 9.6 %"),
+    ("Prot (%)/MS",                "Protéine/MS",      lambda v: v < 11,               "> 11 %"),
+    ("Tps de Chute",               "Temps de Chute",   lambda v: v < 250,              "> 250"),
+    ("Amidon End",                 "Amidon End (UCD)", lambda v: v < 18 or v > 25,    "18-25"),
+    ("G 200µ",                     "G 200µ",           lambda v: v > 2,                "< 2 %"),
+    ("∑ 180;63",                   "∑ 180-63µ",        lambda v: v <= 63,              "> 63 %"),
+    ("Gluten Humide",              "Gluten Humide",    lambda v: v < 22,               "> 22 %"),
+    ("Col. L",                     "Couleur L",        lambda v: v < 89,               "> 89"),
+    ("Cendres (%) (+/- 0,02)",     "Cendres",          lambda v: v > 0.7,              "< 0.7 %"),
+    ("Alvéo W",                    "Alvéo W",          lambda v: v < 150,              ">= 150"),
+    ("Alvéo P/L",                  "Alvéo P/L",        lambda v: v < 1 or v > 1.5,    "1 <= x <= 1.5"),
+    ("Alvéo Ie",                   "Alvéo Ie",         lambda v: v < 45,               "> 45"),
 ]
 PS_STRING = [
     ("Emballage (Etanchité,visuel...)", "Emballage",  "C"),
@@ -120,7 +119,6 @@ PS_STRING = [
     ("C.Date",                          "Etiquetage", "C"),
 ]
 
-# ---------- Descripteurs des 3 tables ----------
 TABLES = [
     {
         "name"      : "SSSE",
@@ -131,7 +129,7 @@ TABLES = [
         "col_etape" : "Etape",
         "col_echant": "N° de l'échantillon",
         "col_notif" : "Notif",
-        "col_prob"  : None,   # pas de colonne Problème dans SSSE
+        "col_prob"  : None,
         "numeric"   : SSSE_NUMERIC,
         "string"    : SSSE_STRING,
     },
@@ -163,9 +161,6 @@ TABLES = [
     },
 ]
 
-# ============================================================
-#  COULEURS PAR PARAMÈTRE (communes aux 3 tables)
-# ============================================================
 PARAM_COLORS = {
     "Piqûre Brun"       : "FDECEA",
     "Piqûre Noir"       : "EDE7F6",
@@ -197,15 +192,18 @@ PARAM_COLORS = {
 
 # ============================================================
 #  ETAPE 1 — Authentification
+#  On supprime .token_cache.json si les scopes ont changé
 # ============================================================
 def get_token():
-    cache = msal.SerializableTokenCache()
+    cache      = msal.SerializableTokenCache()
     cache_file = ".token_cache.json"
     if os.path.exists(cache_file):
         with open(cache_file) as f:
             cache.deserialize(f.read())
-    app = msal.PublicClientApplication(client_id=CLIENT_ID, authority=AUTHORITY, token_cache=cache)
+
+    app      = msal.PublicClientApplication(client_id=CLIENT_ID, authority=AUTHORITY, token_cache=cache)
     accounts = app.get_accounts()
+
     if accounts:
         print(f"  Compte en cache : {accounts[0]['username']}")
         result = app.acquire_token_silent(SCOPES, account=accounts[0])
@@ -213,20 +211,23 @@ def get_token():
             print("  Token valide trouvé dans le cache")
             _save_cache(cache, cache_file)
             return result["access_token"]
+
     flow = app.initiate_device_flow(scopes=SCOPES)
     if "user_code" not in flow:
-        raise Exception(f"Erreur : {flow}")
+        raise Exception(f"Erreur flow : {flow}")
+
     print("\n" + "="*55)
     print("  CONNEXION REQUISE")
     print("="*55)
     print(f"\n  1. Ouvre : https://microsoft.com/devicelogin")
     print(f"  2. Entre le code : {flow['user_code']}")
-    print(f"  3. Connecte-toi avec ton compte rose-blanche.com")
+    print(f"  3. Connecte-toi avec : siwar.chaari@rose-blanche.com")
     print(f"\n  En attente...\n")
     try:
         webbrowser.open("https://microsoft.com/devicelogin")
     except:
         pass
+
     result = app.acquire_token_by_device_flow(flow)
     if "access_token" not in result:
         raise Exception(f"Connexion échouée : {result.get('error_description', result)}")
@@ -240,43 +241,46 @@ def _save_cache(cache, path):
             f.write(cache.serialize())
 
 # ============================================================
-#  ETAPE 2 — Lecture SharePoint
+#  ETAPE 2 — Lecture du fichier SOURCE (site entreprise)
+#  Utilise l'URL de téléchargement SharePoint classique.
+#  Le fichier original n'est jamais modifié.
 # ============================================================
-def read_workbook(token):
-    """Télécharge le fichier Excel SharePoint et retourne le contenu brut."""
-    print("  Téléchargement direct via SharePoint...")
+def read_workbook(token) -> bytes:
+    """Télécharge le fichier Excel source depuis SharePoint entreprise (lecture seule)."""
+    print("  Téléchargement du fichier source (site entreprise)...")
     download_url = (
-        f"{SP_BASE_URL}/sites/SDAHSESTPA"
+        f"{SP_SOURCE_BASE_URL}/sites/SDAHSESTPA"
         f"/_layouts/15/download.aspx"
         f"?UniqueId={FILE_UNIQUE_ID}"
     )
-    headers = {"Authorization": f"Bearer {token}", "Accept": "*/*", "User-Agent": "Mozilla/5.0"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept"       : "*/*",
+        "User-Agent"   : "Mozilla/5.0"
+    }
     resp = requests.get(download_url, headers=headers, timeout=60, allow_redirects=True)
     if resp.status_code != 200 or b"<!DOCTYPE" in resp.content[:200]:
         raise Exception(f"Erreur {resp.status_code} — supprime .token_cache.json et relance")
-    print("  Fichier téléchargé avec succès.")
+    print("  Fichier source téléchargé avec succès (original non modifié).")
     return resp.content
 
 def read_sheet(content: bytes, table_cfg: dict) -> pd.DataFrame:
-    """Lit une feuille spécifique depuis le contenu binaire du classeur."""
     try:
         df = pd.read_excel(io.BytesIO(content), sheet_name=table_cfg["sheet"], header=0)
         df.columns = [str(c).strip() for c in df.columns]
         print(f"  [{table_cfg['name']}] {len(df)} lignes lues — feuille '{table_cfg['sheet']}'")
         return df
     except Exception as e:
-        # Affiche les feuilles disponibles
         try:
             xls = pd.ExcelFile(io.BytesIO(content))
-            available_sheets = xls.sheet_names
             print(f"  [ERREUR] Feuille '{table_cfg['sheet']}' introuvable!")
-            print(f"  [INFO] Feuilles disponibles : {available_sheets}")
+            print(f"  [INFO]  Feuilles disponibles : {xls.sheet_names}")
         except:
             pass
         raise
 
 # ============================================================
-#  ETAPE 3 — Détection des anomalies (générique)
+#  ETAPE 3 — Détection des anomalies
 # ============================================================
 def _to_float(val):
     if val is None:
@@ -304,7 +308,6 @@ def prepare_data(df: pd.DataFrame, table_cfg: dict):
     rows_anom = []
 
     for _, r in df.iterrows():
-        # --- Vérifications numériques ---
         for col, label, cond, cible in table_cfg["numeric"]:
             v = _to_float(r.get(col))
             if v is not None and cond(v):
@@ -323,7 +326,6 @@ def prepare_data(df: pd.DataFrame, table_cfg: dict):
                     "Commentaires"  : r.get("Commentaire", r.get("Commentaires", "")),
                 })
 
-        # --- Vérifications texte ---
         for col, label, target in table_cfg["string"]:
             v = r.get(col)
             if v is not None and not (isinstance(v, float) and np.isnan(v)):
@@ -345,8 +347,8 @@ def prepare_data(df: pd.DataFrame, table_cfg: dict):
 
     df_anom = pd.DataFrame(rows_anom)
 
-    print(f"  [{table_cfg['name']}] Total lignes analysées : {len(df)}")
-    print(f"  [{table_cfg['name']}] Total anomalies réelles: {len(df_anom)}")
+    print(f"  [{table_cfg['name']}] Total lignes analysées  : {len(df)}")
+    print(f"  [{table_cfg['name']}] Total anomalies réelles : {len(df_anom)}")
     if len(df_anom) > 0:
         print(f"  Répartition par paramètre :")
         for param, cnt in df_anom["Parametre"].value_counts().items():
@@ -355,12 +357,11 @@ def prepare_data(df: pd.DataFrame, table_cfg: dict):
     return df, df_anom
 
 # ============================================================
-#  ETAPE 4 — Génération Excel structuré (4 feuilles)
+#  ETAPE 4 — Génération Excel en mémoire (4 feuilles)
+#  Retourne des bytes — aucun fichier local créé.
 # ============================================================
-def generate_excel(df_all: pd.DataFrame, df_anom: pd.DataFrame, table_cfg: dict) -> str:
-    output_file = table_cfg["output"]
-    col_notif   = table_cfg["col_notif"]
-    has_prob    = table_cfg["col_prob"] is not None
+def generate_excel_bytes(df_all: pd.DataFrame, df_anom: pd.DataFrame, table_cfg: dict) -> bytes:
+    has_prob = table_cfg["col_prob"] is not None
 
     wb = Workbook()
 
@@ -368,9 +369,9 @@ def generate_excel(df_all: pd.DataFrame, df_anom: pd.DataFrame, table_cfg: dict)
     HEADER_FONT  = Font(color="FFFFFF", bold=True, size=11, name="Arial")
     HEADER_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True)
     BORDER = Border(
-        left=Side(style="thin", color="D0D0D0"),
-        right=Side(style="thin", color="D0D0D0"),
-        top=Side(style="thin", color="D0D0D0"),
+        left  =Side(style="thin", color="D0D0D0"),
+        right =Side(style="thin", color="D0D0D0"),
+        top   =Side(style="thin", color="D0D0D0"),
         bottom=Side(style="thin", color="D0D0D0")
     )
 
@@ -411,11 +412,11 @@ def generate_excel(df_all: pd.DataFrame, df_anom: pd.DataFrame, table_cfg: dict)
         d = r["Date"] if pd.notna(r["Date"]) else None
         row_data = [
             d,
-            str(r["Année"])     if pd.notna(r.get("Année"))     else "",
-            int(r["Mois_num"])  if pd.notna(r.get("Mois_num"))  else "",
-            d.isocalendar()[1]  if d else "",
-            str(r["N°lot"])         if pd.notna(r.get("N°lot"))         else "",
-            str(r["N° Echantillon"])if pd.notna(r.get("N° Echantillon"))else "",
+            str(r["Année"])      if pd.notna(r.get("Année"))          else "",
+            int(r["Mois_num"])   if pd.notna(r.get("Mois_num"))       else "",
+            d.isocalendar()[1]   if d else "",
+            str(r["N°lot"])          if pd.notna(r.get("N°lot"))          else "",
+            str(r["N° Echantillon"]) if pd.notna(r.get("N° Echantillon")) else "",
             str(r["Etape"]),
             str(r["Parametre"]),
             r["Valeur"],
@@ -447,7 +448,6 @@ def generate_excel(df_all: pd.DataFrame, df_anom: pd.DataFrame, table_cfg: dict)
     df2["Mois_n"] = df2["Date"].dt.month
     df2["An"]     = df2["Date"].dt.year
 
-    # Taux de notification : compte les valeurs contenant "Libération" ou "Oui"
     def count_notif(x):
         return sum(
             1 for v in x
@@ -473,7 +473,8 @@ def generate_excel(df_all: pd.DataFrame, df_anom: pd.DataFrame, table_cfg: dict)
 
     if grp2.shape[0] > 0:
         chart2 = BarChart()
-        chart2.type = "col"; chart2.title = f"Anomalies par mois — {table_cfg['name']}"
+        chart2.type = "col"
+        chart2.title = f"Anomalies par mois — {table_cfg['name']}"
         chart2.y_axis.title = "Nb Anomalies"
         chart2.add_data(Reference(ws2, min_col=4, min_row=1, max_row=grp2.shape[0]+1), titles_from_data=True)
         chart2.set_categories(Reference(ws2, min_col=3, min_row=2, max_row=grp2.shape[0]+1))
@@ -513,7 +514,8 @@ def generate_excel(df_all: pd.DataFrame, df_anom: pd.DataFrame, table_cfg: dict)
     set_widths(ws3, [25, 16, 14, 12, 14, 22, 18])
 
     if grp3.shape[0] > 0:
-        pie3 = PieChart(); pie3.title = f"Répartition par paramètre — {table_cfg['name']}"
+        pie3 = PieChart()
+        pie3.title = f"Répartition par paramètre — {table_cfg['name']}"
         pie3.add_data(Reference(ws3, min_col=3, min_row=1, max_row=grp3.shape[0]+1), titles_from_data=True)
         pie3.set_categories(Reference(ws3, min_col=1, min_row=2, max_row=grp3.shape[0]+1))
         pie3.width = 18; pie3.height = 12
@@ -541,82 +543,221 @@ def generate_excel(df_all: pd.DataFrame, df_anom: pd.DataFrame, table_cfg: dict)
     set_widths(ws4, [18, 14, 12, 14, 22, 16])
 
     if grp4.shape[0] > 0:
-        chart4 = BarChart(); chart4.type = "bar"
+        chart4 = BarChart()
+        chart4.type = "bar"
         chart4.title = f"Anomalies par étape — {table_cfg['name']}"
         chart4.add_data(Reference(ws4, min_col=2, min_row=1, max_row=grp4.shape[0]+1), titles_from_data=True)
         chart4.set_categories(Reference(ws4, min_col=1, min_row=2, max_row=grp4.shape[0]+1))
         chart4.width = 18; chart4.height = 12
         ws4.add_chart(chart4, "H2")
 
-    wb.save(output_file)
-    print(f"  [{table_cfg['name']}] Fichier : {output_file}")
-    print(f"  Feuilles : Anomalies_Detail ({len(df_anom)} lignes) | Resume_Mensuel | Resume_Parametre | Resume_Etape")
-    return output_file
+    # --- Sauvegarde en mémoire (pas sur disque) ---
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    file_bytes = buffer.read()
+    print(f"  [{table_cfg['name']}] Excel généré en mémoire ({len(file_bytes)//1024} KB)")
+    return file_bytes
+
+# ============================================================
+#  ETAPE 5 — Upload vers ton OneDrive personnel (Graph API)
+#  Le fichier est placé dans /Anomalies_Export/<filename>
+#  dans TON OneDrive personnel, séparé du site entreprise.
+# ============================================================
+def get_my_drive_id(token: str) -> str:
+    """Récupère l'ID du OneDrive de l'utilisateur connecté."""
+    resp = requests.get(
+        "https://graph.microsoft.com/v1.0/me/drive",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    if resp.status_code != 200:
+        raise Exception(f"Impossible de récupérer le OneDrive : {resp.status_code} — {resp.text}")
+    drive = resp.json()
+    print(f"  OneDrive personnel : {drive.get('name', '?')} ({drive['id']})")
+    return drive["id"]
+
+def ensure_folder(token: str, drive_id: str, folder_name: str) -> str:
+    """Crée le dossier de destination s'il n'existe pas. Retourne l'ID du dossier."""
+    # Vérifie si le dossier existe déjà dans la racine
+    url = f"https://graph.microsoft.com/v1.0/me/drive/root/children"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    resp = requests.get(url, headers=headers)
+    items = resp.json().get("value", [])
+    for item in items:
+        if item.get("name") == folder_name and "folder" in item:
+            print(f"  Dossier '{folder_name}' trouvé (id: {item['id']})")
+            return item["id"]
+
+    # Crée le dossier
+    payload = {
+        "name": folder_name,
+        "folder": {},
+        "@microsoft.graph.conflictBehavior": "rename"
+    }
+    resp = requests.post(url, headers=headers, json=payload)
+    if resp.status_code not in (200, 201):
+        raise Exception(f"Erreur création dossier : {resp.status_code} — {resp.text}")
+    folder_id = resp.json()["id"]
+    print(f"  Dossier '{folder_name}' créé (id: {folder_id})")
+    return folder_id
+
+def upload_to_my_onedrive(token: str, file_bytes: bytes, filename: str) -> str:
+    """
+    Upload un fichier Excel vers ton OneDrive personnel (roseblanchetn-my.sharepoint.com).
+    Utilise l'API Graph /me/drive — complètement séparé du site entreprise.
+    Retourne l'URL web du fichier uploadé.
+    """
+    print(f"  Upload de '{filename}' vers OneDrive personnel...")
+
+    # Pour les fichiers > 4 MB on utilise une upload session, sinon PUT simple
+    size_mb = len(file_bytes) / (1024 * 1024)
+
+    headers_base = {"Authorization": f"Bearer {token}"}
+
+    if size_mb < 4:
+        # --- Upload simple (PUT) ---
+        url = (
+            f"https://graph.microsoft.com/v1.0/me/drive/root:/"
+            f"{ONEDRIVE_FOLDER}/{filename}:/content"
+        )
+        headers = {
+            **headers_base,
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }
+        resp = requests.put(url, headers=headers, data=file_bytes, timeout=60)
+
+        if resp.status_code in (200, 201):
+            item    = resp.json()
+            web_url = item.get("webUrl", "")
+            print(f"  ✅ '{filename}' uploadé sur OneDrive personnel")
+            print(f"     URL : {web_url}")
+            return web_url
+        else:
+            raise Exception(f"Erreur upload '{filename}' : {resp.status_code} — {resp.text}")
+
+    else:
+        # --- Upload session (pour fichiers > 4 MB) ---
+        session_url = (
+            f"https://graph.microsoft.com/v1.0/me/drive/root:/"
+            f"{ONEDRIVE_FOLDER}/{filename}:/createUploadSession"
+        )
+        session_payload = {
+            "item": {
+                "@microsoft.graph.conflictBehavior": "replace",
+                "name": filename
+            }
+        }
+        sess_resp = requests.post(
+            session_url,
+            headers={**headers_base, "Content-Type": "application/json"},
+            json=session_payload, timeout=30
+        )
+        if sess_resp.status_code != 200:
+            raise Exception(f"Erreur création session upload : {sess_resp.status_code} — {sess_resp.text}")
+
+        upload_url = sess_resp.json()["uploadUrl"]
+        chunk_size = 3 * 1024 * 1024  # 3 MB par chunk
+        total      = len(file_bytes)
+        start      = 0
+        last_resp  = None
+
+        while start < total:
+            end   = min(start + chunk_size - 1, total - 1)
+            chunk = file_bytes[start:end + 1]
+            chunk_headers = {
+                "Content-Length": str(len(chunk)),
+                "Content-Range" : f"bytes {start}-{end}/{total}",
+                "Content-Type"  : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            }
+            r = requests.put(upload_url, headers=chunk_headers, data=chunk, timeout=60)
+            last_resp = r
+            start = end + 1
+            print(f"     Envoyé {start}/{total} octets...")
+
+        if last_resp and last_resp.status_code in (200, 201):
+            item    = last_resp.json()
+            web_url = item.get("webUrl", "")
+            print(f"  ✅ '{filename}' uploadé sur OneDrive personnel")
+            print(f"     URL : {web_url}")
+            return web_url
+        else:
+            status = last_resp.status_code if last_resp else "?"
+            raise Exception(f"Erreur upload session '{filename}' : {status}")
 
 # ============================================================
 #  MAIN
 # ============================================================
 if __name__ == "__main__":
-    print("\n" + "="*55)
-    print("  Export Anomalies SSSE / PS-7 / PS → Excel Power BI")
-    print("="*55 + "\n")
+    print("\n" + "="*60)
+    print("  Export Anomalies SSSE / PS-7 / PS → OneDrive Personnel")
+    print("="*60 + "\n")
+    print("  ℹ️  Les fichiers originaux sur le site entreprise")
+    print("      ne seront PAS modifiés (lecture seule).\n")
+    print("  ℹ️  Les fichiers générés seront déposés dans :")
+    print(f"      OneDrive personnel → /{ONEDRIVE_FOLDER}/\n")
 
+    # ---- Auth ----
     print("[1/4] Authentification Microsoft...")
+    print("      Si tu as déjà un .token_cache.json avec les anciens")
+    print("      scopes, supprime-le pour forcer une reconnexion.\n")
     token = get_token()
 
-    print("\n[2/4] Téléchargement fichier Excel SharePoint...")
+    # ---- Téléchargement source ----
+    print("\n[2/4] Téléchargement fichier Excel source (site entreprise)...")
     raw_content = read_workbook(token)
 
-    generated_files = []
-    total_lignes    = 0
-    total_anomalies = 0
-    errors = []
-
+    # ---- Traitement des 3 tables ----
     print("\n[3/4] Détection des anomalies — 3 tables...")
+    results = []   # [(filename, file_bytes)]
+    errors  = []
+
     for table_cfg in TABLES:
         try:
             print(f"\n  --- {table_cfg['name']} ---")
-            df_raw = read_sheet(raw_content, table_cfg)
+            df_raw          = read_sheet(raw_content, table_cfg)
             df_all, df_anom = prepare_data(df_raw, table_cfg)
-            total_lignes    += len(df_all)
-            total_anomalies += len(df_anom)
-
-            print(f"\n[4/4] Génération Excel — {table_cfg['name']}...")
-            path = generate_excel(df_all, df_anom, table_cfg)
-            generated_files.append(path)
+            file_bytes      = generate_excel_bytes(df_all, df_anom, table_cfg)
+            results.append((table_cfg["output"], file_bytes, len(df_anom)))
         except Exception as e:
-            error_msg = f"ERREUR [{table_cfg['name']}]: {str(e)}"
-            print(f"\n  ❌ {error_msg}")
-            errors.append(error_msg)
-            import traceback
-            traceback.print_exc()
-            continue
-    
+            err = f"ERREUR [{table_cfg['name']}]: {e}"
+            print(f"\n  ❌ {err}")
+            errors.append(err)
+            import traceback; traceback.print_exc()
+
+    # ---- Upload vers OneDrive personnel ----
+    print("\n[4/4] Upload vers OneDrive personnel...")
+    uploaded_urls = []
+
+    for filename, file_bytes, nb_anom in results:
+        try:
+            url = upload_to_my_onedrive(token, file_bytes, filename)
+            uploaded_urls.append((filename, url, nb_anom))
+        except Exception as e:
+            err = f"ERREUR upload [{filename}]: {e}"
+            print(f"\n  ❌ {err}")
+            errors.append(err)
+            import traceback; traceback.print_exc()
+
+    # ---- Résumé ----
+    print("\n" + "="*60)
+    print("  TERMINÉ")
+    print("="*60)
+
     if errors:
-        print("\n" + "="*55)
-        print("  ERREURS DÉTECTÉES")
-        print("="*55)
-        for err in errors:
-            print(f"  ❌ {err}")
-        print("\nLE SCRIPT CONTINUERA MALGRÉ LES ERREURS\n")
+        print("\n  ⚠️  Erreurs rencontrées :")
+        for e in errors:
+            print(f"    ❌ {e}")
 
-    # Commit & push
-    import subprocess
-    for path in generated_files:
-        subprocess.run(["git", "add", path])
-    subprocess.run(["git", "commit", "-m",
-                    f"Update anomalies SSSE/PS7/PS {datetime.now().strftime('%Y-%m-%d')}"])
-    subprocess.run(["git", "push"])
+    if uploaded_urls:
+        print("\n  ✅ Fichiers déposés sur ton OneDrive personnel :")
+        for fname, url, nb in uploaded_urls:
+            print(f"\n    📄 {fname}  ({nb} anomalies)")
+            print(f"       {url}")
 
-    print("\n" + "="*55)
-    print("  TERMINÉ !")
-    print("="*55)
-    print(f"\n  Total lignes analysées : {total_lignes}")
-    print(f"  Total anomalies réelles: {total_anomalies}")
-    print(f"\n  Fichiers générés :")
-    for p in generated_files:
-        print(f"    → {p}")
-    print(f"\n  Prochaine étape :")
-    print(f"  → Télécharge les fichiers depuis Codespaces")
-    print(f"  → Ouvre dans Power BI Desktop → Source Excel")
+    print(f"\n  Dossier OneDrive : /{ONEDRIVE_FOLDER}/")
+    print("\n  Prochaine étape Power BI :")
+    print("  → Dans Power BI Desktop : Obtenir données → SharePoint Online")
+    print(f"  → URL du site : https://{ONEDRIVE_HOST}/personal/{ONEDRIVE_USER}")
+    print("  → Navigue jusqu'au dossier Anomalies_Export")
+    print("  → Publie sur Power BI Service et active le rafraîchissement planifié")
     print()
