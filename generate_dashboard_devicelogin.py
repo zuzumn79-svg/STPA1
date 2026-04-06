@@ -36,10 +36,10 @@ ONEDRIVE_FOLDER    = "Anomalies_Export"
 # --- Auth ---
 CLIENT_ID  = "14d82eec-204b-4c2f-b7e8-296a70dab67e"
 AUTHORITY  = "https://login.microsoftonline.com/organizations"
-SCOPES     = [
-    # Lecture du site source
+SCOPES_SHAREPOINT = [
     "https://roseblanchetn.sharepoint.com/AllSites.Read",
-    # Écriture sur OneDrive personnel
+]
+SCOPES_GRAPH = [
     "https://graph.microsoft.com/Files.ReadWrite",
     "https://graph.microsoft.com/User.Read",
 ]
@@ -194,30 +194,25 @@ PARAM_COLORS = {
 #  ETAPE 1 — Authentification
 #  On supprime .token_cache.json si les scopes ont changé
 # ============================================================
-def get_token():
-    cache      = msal.SerializableTokenCache()
-    cache_file = ".token_cache.json"
+def _save_cache(cache, pathx):
+    if cache.has_state_changed:
+        with open(pathx, "w") as f:
+            f.write(cache.serialize())
+
+def _get_app(cache_file):
+    cache = msal.SerializableTokenCache()
     if os.path.exists(cache_file):
         with open(cache_file) as f:
             cache.deserialize(f.read())
+    app = msal.PublicClientApplication(client_id=CLIENT_ID, authority=AUTHORITY, token_cache=cache)
+    return app, cache
 
-    app      = msal.PublicClientApplication(client_id=CLIENT_ID, authority=AUTHORITY, token_cache=cache)
-    accounts = app.get_accounts()
-
-    if accounts:
-        print(f"  Compte en cache : {accounts[0]['username']}")
-        result = app.acquire_token_silent(SCOPES, account=accounts[0])
-        if result and "access_token" in result:
-            print("  Token valide trouvé dans le cache")
-            _save_cache(cache, cache_file)
-            return result["access_token"]
-
-    flow = app.initiate_device_flow(scopes=SCOPES)
+def _device_flow_login(app, scopes, cache, cache_file, label):
+    flow = app.initiate_device_flow(scopes=scopes)
     if "user_code" not in flow:
-        raise Exception(f"Erreur flow : {flow}")
-
+        raise Exception(f"Erreur flow {label} : {flow}")
     print("\n" + "="*55)
-    print("  CONNEXION REQUISE")
+    print(f"  CONNEXION REQUISE ({label})")
     print("="*55)
     print(f"\n  1. Ouvre : https://microsoft.com/devicelogin")
     print(f"  2. Entre le code : {flow['user_code']}")
@@ -227,13 +222,36 @@ def get_token():
         webbrowser.open("https://microsoft.com/devicelogin")
     except:
         pass
-
     result = app.acquire_token_by_device_flow(flow)
     if "access_token" not in result:
-        raise Exception(f"Connexion échouée : {result.get('error_description', result)}")
-    print("  Connecté avec succès !")
+        raise Exception(f"Connexion échouée ({label}) : {result.get('error_description', result)}")
+    print(f"  Connecté ({label}) !")
     _save_cache(cache, cache_file)
     return result["access_token"]
+
+def get_token_sharepoint():
+    cache_file = ".token_cache_sp.json"
+    app, cache = _get_app(cache_file)
+    accounts = app.get_accounts()
+    if accounts:
+        result = app.acquire_token_silent(SCOPES_SHAREPOINT, account=accounts[0])
+        if result and "access_token" in result:
+            print("  [SharePoint] Token en cache valide")
+            _save_cache(cache, cache_file)
+            return result["access_token"]
+    return _device_flow_login(app, SCOPES_SHAREPOINT, cache, cache_file, "SharePoint source")
+
+def get_token_graph():
+    cache_file = ".token_cache_graph.json"
+    app, cache = _get_app(cache_file)
+    accounts = app.get_accounts()
+    if accounts:
+        result = app.acquire_token_silent(SCOPES_GRAPH, account=accounts[0])
+        if result and "access_token" in result:
+            print("  [Graph/OneDrive] Token en cache valide")
+            _save_cache(cache, cache_file)
+            return result["access_token"]
+    return _device_flow_login(app, SCOPES_GRAPH, cache, cache_file, "Graph/OneDrive")
 
 def _save_cache(cache, path):
     if cache.has_state_changed:
@@ -700,11 +718,12 @@ if __name__ == "__main__":
     print("[1/4] Authentification Microsoft...")
     print("      Si tu as déjà un .token_cache.json avec les anciens")
     print("      scopes, supprime-le pour forcer une reconnexion.\n")
-    token = get_token()
+    token_sp = get_token_sharepoint()
+    token_graph = get_token_graph()
 
     # ---- Téléchargement source ----
     print("\n[2/4] Téléchargement fichier Excel source (site entreprise)...")
-    raw_content = read_workbook(token)
+    raw_content = read_workbook(token_sp)
 
     # ---- Traitement des 3 tables ----
     print("\n[3/4] Détection des anomalies — 3 tables...")
@@ -730,7 +749,7 @@ if __name__ == "__main__":
 
     for filename, file_bytes, nb_anom in results:
         try:
-            url = upload_to_my_onedrive(token, file_bytes, filename)
+            url = upload_to_my_onedrive(token_graph, file_bytes, filename)
             uploaded_urls.append((filename, url, nb_anom))
         except Exception as e:
             err = f"ERREUR upload [{filename}]: {e}"
