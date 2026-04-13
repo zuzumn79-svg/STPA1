@@ -52,7 +52,7 @@ MOIS_FR = {1:"Janvier",2:"Février",3:"Mars",4:"Avril",5:"Mai",6:"Juin",
 # ============================================================
 
 SSSE_NUMERIC = [
-    ("Humidité (%)",               "Teneur en Eau",   lambda v: v < 13 or v > 14.5, "13 < x < 14.5"),
+    ("Humidité (%)",               "Teneur en Eau",   lambda v: v < 13.5 or v > 14.5, "13.5 < x < 14.5"),
     ("AW",                         "AW",              lambda v: v > 0.7,              "< 0.7"),
     ("Protéine Brut (%) (+/-0,7)", "Protéine Brute",  lambda v: v < 10,               "> 10 %"),
     ("Protéine (%)/MS",            "Protéine/MS",     lambda v: v < 12,               "> 12 %"),
@@ -76,7 +76,7 @@ SSSE_STRING = [
 ]
 
 PS7_NUMERIC = [
-    ("Humidité (%)",               "Teneur en Eau",    lambda v: v < 13 or v > 14.5, "13 < x < 14.5"),
+    ("Humidité (%)",               "Teneur en Eau",    lambda v: v < 13.5 or v > 14.5, "13.5 < x < 14.5"),
     ("AW",                         "AW",               lambda v: v > 0.7,              "< 0.7"),
     ("Protéine Brut (%) (+/-0,6)", "Protéine Brute",   lambda v: v < 9.6,              "> 9.6 %"),
     ("Prot (%)/MS",                "Protéine/MS",      lambda v: v < 11,               "> 11 %"),
@@ -98,7 +98,7 @@ PS7_STRING = [
 ]
 
 PS_NUMERIC = [
-    ("Humidité (%)",               "Teneur en Eau",    lambda v: v < 13 or v > 14.5, "13 < x < 14.5"),
+    ("Humidité (%)",               "Teneur en Eau",    lambda v: v < 13.5 or v > 14.5, "13.5 < x < 14.5"),
     ("AW",                         "AW",               lambda v: v > 0.7,              "< 0.7"),
     ("Protéine Brut (%) (+/-0,6)", "Protéine Brute",   lambda v: v < 9.6,              "> 9.6 %"),
     ("Prot (%)/MS",                "Protéine/MS",      lambda v: v < 11,               "> 11 %"),
